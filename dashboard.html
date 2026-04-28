@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CVE Nessus Coverage — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #fafaf7; --bg-alt: #f5f4ef; --card: #ffffff;
+  --ink: #0a0a0a; --ink-2: #3a3a3a; --ink-3: #6b6b6b; --ink-4: #9a9a9a; --ink-5: #c4c4c4;
+  --line: #e7e5df; --line-2: #d4d2cc;
+  --accent: #1a1a1a; --accent-hi: #000; --ink-invert: #fafaf7;
+  --ok: #0f766e; --ok-soft: #ccfbf1; --ok-line: #5eead4;
+  --bad: #b91c1c; --bad-soft: #fee2e2; --bad-line: #fca5a5;
+  --warn: #b45309; --warn-soft: #fef3c7; --warn-line: #fcd34d;
+  --info: #1e40af; --info-soft: #dbeafe; --info-line: #93c5fd;
+  --crit: #991b1b; --high: #b45309; --med: #1e40af; --low: #0f766e;
+  --display: 'Instrument Serif', Georgia, serif;
+  --sans: 'Inter Tight', -apple-system, system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --r-sm: 4px; --r: 8px; --r-lg: 14px;
+  --shadow-sm: 0 1px 2px rgba(10,10,10,0.04), 0 1px 3px rgba(10,10,10,0.05);
+  --shadow: 0 2px 4px rgba(10,10,10,0.04), 0 4px 12px rgba(10,10,10,0.06);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--sans); background: var(--bg); color: var(--ink);
+  font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(10,10,10,0.013) 1px, transparent 0);
+  background-size: 16px 16px; pointer-events: none; z-index: 1;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-alt); }
+::-webkit-scrollbar-thumb { background: var(--ink-5); border-radius: 5px; border: 2px solid var(--bg-alt); }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+
+.app { position: relative; z-index: 2; display: grid; grid-template-columns: 340px 1fr; min-height: 100vh; }
+
+.sidebar {
+  background: var(--card); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.brand { padding: 2rem 1.75rem 1.5rem; border-bottom: 1px solid var(--line); position: relative; }
+.brand::after {
+  content: ''; position: absolute; bottom: -1px; left: 1.75rem;
+  width: 56px; height: 2px; background: var(--accent);
+}
+.brand-title { font-family: var(--display); font-size: 30px; font-weight: 400; letter-spacing: -0.02em; line-height: 0.95; }
+.brand-title em { font-style: italic; color: var(--ink-3); }
+.brand-edition {
+  font-family: var(--mono); font-size: 9px; color: var(--ink-4);
+  text-transform: uppercase; letter-spacing: 0.15em; margin-top: 6px;
+}
+.brand-meta {
+  margin-top: 14px; font-family: var(--mono); font-size: 10px; color: var(--ink-3);
+  line-height: 1.7; border-top: 1px dashed var(--line-2); padding-top: 10px;
+}
+.brand-meta .key { color: var(--ink-4); display: inline-block; width: 62px; }
+
+.sb-section { padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--line); }
+.sb-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sb-label::before { content: ''; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.field:last-child { margin-bottom: 0; }
+.field-label {
+  font-family: var(--mono); font-size: 10px; color: var(--ink-3); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.input {
+  height: 36px; padding: 0 12px; background: var(--bg);
+  border: 1px solid var(--line-2); border-radius: var(--r);
+  font-family: var(--mono); font-size: 12px; color: var(--ink);
+  outline: none; width: 100%; transition: all 0.15s;
+}
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,26,26,0.08); background: var(--card); }
+.input::placeholder { color: var(--ink-4); }
+textarea.input { height: auto; min-height: 90px; padding: 10px 12px; line-height: 1.7; resize: vertical; font-size: 11px; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 12px; border-radius: 100px;
+  font-family: var(--mono); font-size: 10px; font-weight: 500; margin-bottom: 12px;
+}
+.pill-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill-dot.pulse { animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.pill.idle { background: var(--bg-alt); color: var(--ink-3); border: 1px solid var(--line-2); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); border: 1px solid var(--ok-line); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); border: 1px solid var(--bad-line); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-line); }
+.pill.info { background: var(--info-soft); color: var(--info); border: 1px solid var(--info-line); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  height: 38px; padding: 0 16px; border-radius: var(--r);
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--line-2); background: var(--card); color: var(--ink);
+  transition: all 0.15s; white-space: nowrap; user-select: none; width: 100%;
+}
+.btn:hover:not(:disabled) { border-color: var(--ink-3); background: var(--bg-alt); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.btn:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.primary { background: var(--accent); color: var(--ink-invert); border-color: var(--accent); font-weight: 600; }
+.btn.primary:hover:not(:disabled) { background: var(--accent-hi); border-color: var(--accent-hi); }
+.btn.danger { color: var(--bad); border-color: var(--bad-line); }
+.btn.danger:hover:not(:disabled) { background: var(--bad-soft); border-color: var(--bad); }
+.btn.success { color: var(--ok); border-color: var(--ok-line); background: var(--ok-soft); }
+.btn.success:hover:not(:disabled) { background: var(--ok); color: white; border-color: var(--ok); }
+.btn.ghost { border-color: transparent; color: var(--ink-3); }
+.btn.ghost:hover:not(:disabled) { background: var(--bg-alt); color: var(--ink); }
+.btn.sm { height: 30px; font-size: 11px; padding: 0 11px; }
+.btn-stack { display: flex; flex-direction: column; gap: 8px; }
+
+.tabs { display: flex; gap: 3px; background: var(--bg-alt); border: 1px solid var(--line); border-radius: var(--r); padding: 3px; margin-bottom: 10px; }
+.tab { flex: 1; padding: 6px 10px; font-family: var(--sans); font-size: 11px; font-weight: 500; border-radius: var(--r-sm); border: none; cursor: pointer; background: transparent; color: var(--ink-3); transition: all 0.15s; }
+.tab.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm); font-weight: 600; }
+
+.dropzone { border: 1.5px dashed var(--line-2); border-radius: var(--r-lg); padding: 20px 14px; text-align: center; cursor: pointer; background: var(--bg); position: relative; transition: all 0.2s; }
+.dropzone:hover, .dropzone.over { border-color: var(--accent); background: var(--card); transform: scale(1.01); }
+.dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.dropzone-icon { font-size: 22px; margin-bottom: 4px; }
+.dropzone-text { font-size: 12px; color: var(--ink-2); }
+.dropzone-text strong { color: var(--ink); }
+.dropzone-hint { font-family: var(--mono); font-size: 10px; color: var(--ink-4); margin-top: 3px; }
+.file-chip { display: inline-flex; align-items: center; gap: 7px; background: var(--ok-soft); color: var(--ok); border: 1px solid var(--ok-line); border-radius: 100px; padding: 4px 12px 4px 10px; font-family: var(--mono); font-size: 10px; font-weight: 500; margin-top: 8px; }
+.file-chip button { background: none; border: none; cursor: pointer; color: inherit; font-size: 14px; line-height: 1; }
+.parse-badge { font-family: var(--mono); font-size: 11px; color: var(--info); background: var(--info-soft); border: 1px solid var(--info-line); border-radius: var(--r); padding: 7px 11px; margin-top: 9px; font-weight: 500; }
+
+.slider-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.slider-val { font-family: var(--mono); font-size: 11px; background: var(--bg-alt); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 2px 8px; color: var(--ink); font-weight: 600; min-width: 34px; text-align: center; }
+input[type=range] { width: 100%; accent-color: var(--accent); margin-bottom: 10px; }
+
+.note { background: var(--bg); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 0 var(--r) var(--r) 0; padding: 10px 12px; font-family: var(--mono); font-size: 10px; color: var(--ink-3); line-height: 1.8; margin-top: 10px; }
+.note code { background: var(--bg-alt); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; color: var(--ink); font-weight: 500; }
+.divider { height: 1px; background: var(--line); margin: 10px 0; }
+
+.man-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-bottom: 4px; }
+.man-rm { background: none; border: none; color: var(--ink-4); cursor: pointer; font-size: 14px; line-height: 1; }
+.man-rm:hover { color: var(--bad); }
+
+.idx-box { background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r); padding: 10px 12px; margin-top: 8px; display: none; }
+.idx-box.on { display: block; }
+.idx-label { font-family: var(--mono); font-size: 10px; color: var(--warn); font-weight: 500; margin-bottom: 6px; line-height: 1.5; }
+.idx-bar-mini { height: 3px; background: rgba(180,83,9,0.2); border-radius: 2px; overflow: hidden; }
+.idx-fill-mini { height: 100%; background: var(--warn); border-radius: 2px; transition: width 0.4s; }
+
+.main { display: flex; flex-direction: column; overflow: hidden; }
+.topbar { padding: 1.25rem 2rem; border-bottom: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.topbar-eyebrow { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-4); margin-bottom: 4px; }
+.topbar-title { font-family: var(--display); font-size: 28px; font-weight: 400; letter-spacing: -0.02em; line-height: 1; color: var(--ink); }
+.topbar-title em { font-style: italic; color: var(--ink-3); }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.conn-readout { font-family: var(--mono); font-size: 11px; color: var(--ink-3); padding-right: 12px; border-right: 1px solid var(--line-2); }
+.conn-readout strong { color: var(--ink); font-weight: 600; }
+
+.empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; text-align: center; }
+.empty-mark { font-family: var(--display); font-size: 120px; font-weight: 400; color: var(--ink-5); line-height: 1; margin-bottom: 1rem; letter-spacing: -0.05em; }
+.empty-title { font-family: var(--display); font-size: 32px; font-weight: 400; color: var(--ink); margin-bottom: 8px; letter-spacing: -0.02em; }
+.empty-title em { font-style: italic; color: var(--ink-3); }
+.empty-desc { font-size: 14px; color: var(--ink-3); max-width: 440px; line-height: 1.6; margin-bottom: 1.5rem; }
+.empty-steps { display: flex; gap: 1.5rem; margin-top: 1rem; font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.empty-step { display: flex; align-items: center; gap: 8px; }
+.empty-step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--ink-invert); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+
+.index-panel { padding: 2rem; display: flex; flex-direction: column; gap: 1.25rem; max-width: 880px; margin: 0 auto; width: 100%; }
+.idx-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 2rem 2.25rem; box-shadow: var(--shadow-sm); }
+.idx-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; gap: 1rem; }
+.idx-title { font-family: var(--display); font-size: 24px; font-weight: 400; color: var(--ink); letter-spacing: -0.02em; }
+.idx-title em { font-style: italic; color: var(--ink-3); }
+.idx-subtitle { font-family: var(--mono); font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.idx-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 1.25rem; }
+.idx-stat { background: var(--card); padding: 14px 16px; }
+.idx-stat-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); margin-bottom: 6px; }
+.idx-stat-value { font-family: var(--display); font-size: 26px; font-weight: 400; color: var(--ink); line-height: 1; letter-spacing: -0.02em; }
+.idx-stat-value.num { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+.idx-bar-big { height: 12px; background: var(--bg-alt); border: 1px solid var(--line); border-radius: 100px; overflow: hidden; margin-bottom: 12px; position: relative; }
+.idx-fill-big { height: 100%; background: linear-gradient(90deg, var(--accent), #2a2a2a); border-radius: 100px; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
+.idx-fill-big::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: shimmer 2s linear infinite; }
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.idx-progress-row { display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.idx-progress-row .pct { font-size: 14px; color: var(--ink); font-weight: 600; }
+.idx-actions { display: flex; gap: 10px; margin-top: 1.25rem; justify-content: flex-end; }
+.idx-actions .btn { width: auto; }
+.idx-info { background: var(--info-soft); border: 1px solid var(--info-line); border-left: 3px solid var(--info); border-radius: 0 var(--r) var(--r) 0; padding: 12px 16px; font-size: 12px; color: var(--info); margin-top: 1rem; line-height: 1.6; }
+.idx-info strong { font-weight: 600; }
+
+.dashboard { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.metrics { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--line); background: var(--card); }
+.metric { padding: 1.25rem 1.5rem; border-right: 1px solid var(--line); position: relative; }
+.metric:last-child { border-right: none; }
+.metric-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+.metric-label::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+.metric.m-total .metric-label::before { background: var(--ink-4); }
+.metric.m-cov .metric-label::before { background: var(--ok); }
+.metric.m-nc .metric-label::before { background: var(--bad); }
+.metric.m-pct .metric-label::before { background: var(--info); }
+.metric.m-idx .metric-label::before { background: var(--warn); }
+.metric-value { font-family: var(--display); font-size: 42px; font-weight: 400; line-height: 1; color: var(--ink); letter-spacing: -0.03em; }
+.metric.m-cov .metric-value { color: var(--ok); }
+.metric.m-nc .metric-value { color: var(--bad); }
+.metric.m-pct .metric-value { color: var(--info); }
+.metric-sub { font-family: var(--mono); font-size: 10px; color: var(--ink-4); margin-top: 6px; }
+
+.charts-row { display: grid; grid-template-columns: 280px 1fr 1fr; border-bottom: 1px solid var(--line); background: var(--card); }
+.chart-cell { padding: 1.5rem; border-right: 1px solid var(--line); }
+.chart-cell:last-child { border-right: none; }
+.chart-heading { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
+.chart-heading::before { content: '—'; color: var(--ink-5); font-weight: 400; }
+
+.donut-row { display: flex; align-items: center; gap: 1.25rem; }
+.donut-c { position: relative; width: 116px; height: 116px; flex-shrink: 0; }
+.donut-c svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+circle.d-bg { fill: none; stroke: var(--bg-alt); stroke-width: 10; }
+circle.d-nc { fill: none; stroke: var(--bad); stroke-width: 10; stroke-linecap: butt; transition: stroke-dasharray 0.7s cubic-bezier(0.4,0,0.2,1); }
+circle.d-cov { fill: none; stroke: var(--ok); stroke-width: 10; stroke-linecap: butt; transition: stroke-dasharray 0.7s cubic-bezier(0.4,0,0.2,1); }
+.donut-mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.donut-pct { font-family: var(--display); font-size: 26px; font-weight: 400; color: var(--ink); letter-spacing: -0.03em; line-height: 1; }
+.donut-lbl { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-4); margin-top: 3px; }
+.legend { display: flex; flex-direction: column; gap: 7px; }
+.legend-row { display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.legend-dot { width: 9px; height: 9px; border-radius: 2px; }
+.legend-val { margin-left: auto; font-weight: 600; color: var(--ink); font-size: 12px; }
+
+.sev-bars { display: flex; flex-direction: column; gap: 10px; }
+.sev-row { display: flex; align-items: center; gap: 10px; }
+.sev-name { font-family: var(--mono); font-size: 10px; font-weight: 600; width: 64px; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.05em; }
+.sev-track { flex: 1; height: 6px; background: var(--bg-alt); border: 1px solid var(--line); border-radius: 100px; overflow: hidden; }
+.sev-fill { height: 100%; border-radius: 100px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+.sev-n { font-family: var(--mono); font-size: 11px; color: var(--ink-3); width: 28px; text-align: right; flex-shrink: 0; font-weight: 600; }
+
+.heatmap { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; }
+.heat-cell { width: 14px; height: 14px; border-radius: 2px; background: var(--bg-alt); border: 1px solid var(--line); transition: transform 0.1s; }
+.heat-cell:hover { transform: scale(1.5); z-index: 10; }
+.heat-cell.cov { background: var(--ok); border-color: var(--ok); opacity: 0.85; }
+.heat-cell.nc { background: var(--bad); border-color: var(--bad); opacity: 0.85; }
+.heat-cell.pend { background: var(--bg-alt); }
+
+.scan-bar { padding: 10px 2rem; border-bottom: 1px solid var(--line); background: var(--bg-alt); display: flex; align-items: center; gap: 14px; }
+.scan-spin { width: 14px; height: 14px; border: 2px solid var(--line-2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.scan-text { font-family: var(--mono); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.scan-track { flex: 1; height: 5px; background: var(--line); border-radius: 100px; overflow: hidden; }
+.scan-fill { height: 100%; background: var(--accent); border-radius: 100px; transition: width 0.3s; }
+.scan-pct { font-family: var(--mono); font-size: 12px; color: var(--ink); font-weight: 600; min-width: 40px; text-align: right; }
+
+.tbar { padding: 12px 2rem; background: var(--card); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.tbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tbar-title { font-family: var(--display); font-size: 19px; font-weight: 400; color: var(--ink); letter-spacing: -0.01em; margin-right: 8px; }
+.tbar-title em { font-style: italic; color: var(--ink-3); }
+.filter-chip { padding: 5px 12px; border-radius: 100px; font-family: var(--mono); font-size: 10px; font-weight: 600; border: 1px solid var(--line-2); background: var(--card); cursor: pointer; color: var(--ink-3); transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.04em; }
+.filter-chip:hover { background: var(--bg-alt); color: var(--ink); }
+.filter-chip.on.all { background: var(--accent); color: var(--ink-invert); border-color: var(--accent); }
+.filter-chip.on.cov { background: var(--ok); color: white; border-color: var(--ok); }
+.filter-chip.on.nc { background: var(--bad); color: white; border-color: var(--bad); }
+.search { height: 30px; padding: 0 12px 0 32px; background: var(--bg-alt); border: 1px solid var(--line-2); border-radius: 100px; font-family: var(--mono); font-size: 11px; color: var(--ink); outline: none; width: 200px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath d='M6.5 1a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm4.47 9.17l3.43 3.43-.7.7-3.43-3.43a6.5 6.5 0 1 1 .7-.7z' fill='%239a9a9a'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: 10px center; transition: all 0.15s; }
+.search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,26,26,0.08); background-color: var(--card); }
+.search::placeholder { color: var(--ink-4); }
+.tbar-right { display: flex; gap: 6px; }
+
+.tbl-wrap { flex: 1; overflow: auto; background: var(--card); }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+thead { position: sticky; top: 0; z-index: 5; background: var(--bg-alt); }
+th { padding: 10px 14px; text-align: left; font-family: var(--mono); font-size: 9px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); cursor: pointer; user-select: none; white-space: nowrap; transition: all 0.13s; background: var(--bg-alt); }
+th:hover { color: var(--ink); background: var(--card); }
+th:last-child { border-right: none; }
+.sort-arrow { font-size: 9px; margin-left: 4px; opacity: 0.4; }
+
+td { padding: 10px 14px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); vertical-align: middle; font-size: 13px; color: var(--ink-2); }
+td:last-child { border-right: none; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg-alt); }
+tr.cov:hover td { background: rgba(15,118,110,0.04); }
+tr.nc:hover td { background: rgba(185,28,28,0.04); }
+
+.cve-link { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink); text-decoration: none; border-bottom: 1px dashed var(--line-2); transition: all 0.13s; }
+.cve-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+.status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 100px; font-family: var(--mono); font-size: 10px; font-weight: 600; white-space: nowrap; letter-spacing: 0.03em; }
+.sb-cov { background: var(--ok-soft); color: var(--ok); border: 1px solid var(--ok-line); }
+.sb-nc { background: var(--bad-soft); color: var(--bad); border: 1px solid var(--bad-line); }
+.sb-pend { background: var(--bg-alt); color: var(--ink-4); border: 1px solid var(--line-2); }
+
+.cvss-pill { display: inline-block; padding: 2px 8px; border-radius: var(--r-sm); font-family: var(--mono); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.cp-c { background: rgba(153,27,27,0.1); color: var(--crit); }
+.cp-h { background: rgba(180,83,9,0.1); color: var(--high); }
+.cp-m { background: rgba(30,64,175,0.1); color: var(--med); }
+.cp-l { background: rgba(15,118,110,0.1); color: var(--low); }
+.cp-n { color: var(--ink-4); font-family: var(--mono); font-size: 11px; }
+
+.sev-tag { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: var(--r-sm); }
+.sev-critical { color: var(--crit); background: rgba(153,27,27,0.08); }
+.sev-high { color: var(--high); background: rgba(180,83,9,0.08); }
+.sev-medium { color: var(--med); background: rgba(30,64,175,0.08); }
+.sev-low { color: var(--low); background: rgba(15,118,110,0.08); }
+.sev-none { color: var(--ink-4); }
+
+.plugin-ids { font-family: var(--mono); font-size: 10px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plugin-name { font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.muted { color: var(--ink-5); }
+
+.expand-btn { background: none; border: 1px solid var(--line-2); color: var(--ink-4); cursor: pointer; border-radius: var(--r-sm); width: 22px; height: 22px; font-size: 11px; display: flex; align-items: center; justify-content: center; transition: all 0.13s; }
+.expand-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--bg-alt); }
+.expand-detail { background: var(--bg-alt); padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--ink-2); line-height: 1.8; }
+.expand-detail strong { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-4); font-weight: 600; margin-right: 6px; }
+.plugin-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.plugin-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 3px 9px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.plugin-tag-id { color: var(--accent); font-weight: 600; }
+
+.log-panel { border-top: 1px solid var(--line); background: var(--bg-alt); height: 118px; overflow-y: auto; padding: 8px 2rem; font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.log-line { line-height: 1.85; }
+.log-ts { color: var(--ink-5); margin-right: 8px; }
+.log-ok { color: var(--ok); }
+.log-bad { color: var(--bad); }
+.log-warn { color: var(--warn); }
+.log-info { color: var(--info); }
+
+.tooltip { position: fixed; z-index: 9000; background: var(--accent); color: var(--ink-invert); border-radius: var(--r-sm); padding: 5px 9px; font-family: var(--mono); font-size: 10px; pointer-events: none; white-space: nowrap; box-shadow: var(--shadow); display: none; }
+
+@media (max-width: 1100px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; max-height: none; }
+  .metrics { grid-template-columns: repeat(3, 1fr); }
+  .charts-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .idx-stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-title">Nessus <em>Coverage</em></div>
+    <div class="brand-edition">— Professional Edition · v4</div>
+    <div class="brand-meta">
+      <div><span class="key">Status:</span> <span id="brandStatus">Offline</span></div>
+      <div><span class="key">Index:</span> <span id="brandIndex">—</span></div>
+    </div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">Nessus Connection</div>
+    <div id="connPill" class="pill idle"><div class="pill-dot"></div><span id="connText">Not connected</span></div>
+    <div class="field"><label class="field-label">Nessus URL</label><input class="input" id="nUrl" value="https://localhost:8834"></div>
+    <div class="field"><label class="field-label">Access Key</label><input class="input" id="accessKey" type="password" placeholder="API Access Key" autocomplete="off"></div>
+    <div class="field" style="margin-bottom:12px"><label class="field-label">Secret Key</label><input class="input" id="secretKey" type="password" placeholder="API Secret Key" autocomplete="off"></div>
+    <div class="btn-stack">
+      <button class="btn primary" id="connectBtn" onclick="connect()">◆ Connect</button>
+    </div>
+    <div id="sbIdxBox" class="idx-box">
+      <div class="idx-label" id="sbIdxLabel">Building index…</div>
+      <div class="idx-bar-mini"><div class="idx-fill-mini" id="sbIdxFill" style="width:0%"></div></div>
+    </div>
+    <div class="note">
+      Get keys: <code>My Account → API Keys → Generate</code>.
+      Plugin store is <strong>permanent</strong> — updates fetch only NEW plugins.
+    </div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">CVE Input</div>
+    <div class="tabs">
+      <button class="tab on" id="tab-upload" onclick="switchTab('upload')">Upload</button>
+      <button class="tab" id="tab-paste" onclick="switchTab('paste')">Paste</button>
+      <button class="tab" id="tab-manual" onclick="switchTab('manual')">Manual</button>
+    </div>
+    <div id="panel-upload">
+      <div class="dropzone" id="dz">
+        <input type="file" id="fileInp" accept=".xlsx,.xls,.csv,.txt">
+        <div class="dropzone-icon">⤓</div>
+        <div class="dropzone-text"><strong>Click</strong> or drag &amp; drop</div>
+        <div class="dropzone-hint">.xlsx · .csv · .txt</div>
+      </div>
+      <div id="chipArea"></div>
+    </div>
+    <div id="panel-paste" style="display:none">
+      <textarea class="input" id="pasteArea" placeholder="CVE-2021-44228&#10;CVE-2023-44487&#10;&#10;Paste any text — CVEs auto-extracted" oninput="onPaste()"></textarea>
+    </div>
+    <div id="panel-manual" style="display:none">
+      <div class="field">
+        <label class="field-label">Add CVE ID</label>
+        <div style="display:flex;gap:6px">
+          <input class="input" id="manCveInp" placeholder="CVE-2024-XXXXX" onkeydown="if(event.key==='Enter')addManual()">
+          <button class="btn sm" style="width:auto" onclick="addManual()">Add</button>
+        </div>
+      </div>
+      <div id="manList" style="max-height:120px;overflow-y:auto;margin-top:8px"></div>
+    </div>
+    <div id="parseInfo"></div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">Index Settings</div>
+    <div class="slider-row"><span>Build concurrency</span><span class="slider-val" id="concVal">30</span></div>
+    <input type="range" id="concSlider" min="5" max="80" value="30" oninput="document.getElementById('concVal').textContent=this.value">
+    <div class="note" style="margin-top:0">Higher = faster, more server load. <strong>30</strong> works well.</div>
+  </div>
+
+  <div class="sb-section" style="flex:1">
+    <div class="sb-label">Actions</div>
+    <div class="btn-stack">
+      <button class="btn primary" id="buildIdxBtn" onclick="buildIndex(false)" disabled>⚡ Build / Update index</button>
+      <button class="btn danger" id="abortIdxBtn" onclick="abortIndex()" style="display:none">✕ Abort index build</button>
+      <button class="btn" id="scanBtn" onclick="runScan()" disabled>▶ Scan CVEs</button>
+      <div class="divider"></div>
+      <button class="btn success" id="exportBtn" onclick="exportXlsx()" style="display:none">↓ Export Excel</button>
+      <button class="btn" id="copyCovBtn" onclick="copyList('Covered')" style="display:none">Copy covered CVEs</button>
+      <button class="btn" id="copyNcBtn" onclick="copyList('Not Covered')" style="display:none">Copy uncovered CVEs</button>
+      <button class="btn ghost" id="rebuildBtn" onclick="forceRebuild()" style="display:none">↻ Force full rebuild</button>
+      <button class="btn ghost" onclick="clearAll()">Clear results</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-eyebrow">CVE · Vulnerability Coverage</div>
+      <div class="topbar-title">Nessus <em>Dashboard</em></div>
+    </div>
+    <div class="topbar-right">
+      <span class="conn-readout" id="topConnInfo" style="display:none">Nessus <strong id="nessusVer">—</strong></span>
+    </div>
+  </div>
+
+  <div class="empty" id="emptyState">
+    <div class="empty-mark">∅</div>
+    <div class="empty-title">Begin <em>scanning</em></div>
+    <div class="empty-desc">Connect to Nessus Professional with API keys, build the plugin index once, then check any list of CVEs instantly.</div>
+    <div class="empty-steps">
+      <div class="empty-step"><div class="empty-step-num">1</div> Connect</div>
+      <div class="empty-step"><div class="empty-step-num">2</div> Build index</div>
+      <div class="empty-step"><div class="empty-step-num">3</div> Scan CVEs</div>
+    </div>
+  </div>
+
+  <div class="index-panel" id="indexPanel" style="display:none">
+    <div class="idx-card">
+      <div class="idx-header">
+        <div>
+          <div class="idx-title">Updating <em>plugin index</em></div>
+          <div class="idx-subtitle" id="idxSubtitle">Comparing local store with Nessus...</div>
+        </div>
+        <div class="pill info"><div class="pill-dot pulse"></div><span>IN PROGRESS</span></div>
+      </div>
+      <div class="idx-stats">
+        <div class="idx-stat"><div class="idx-stat-label">Plugins Indexed</div><div class="idx-stat-value num" id="idxDone">0</div></div>
+        <div class="idx-stat"><div class="idx-stat-label">Total Plugins</div><div class="idx-stat-value num" id="idxTotal">—</div></div>
+        <div class="idx-stat"><div class="idx-stat-label">CVEs Found</div><div class="idx-stat-value num" id="idxCves">0</div></div>
+        <div class="idx-stat"><div class="idx-stat-label">ETA</div><div class="idx-stat-value" id="idxEta">—</div></div>
+      </div>
+      <div class="idx-bar-big"><div class="idx-fill-big" id="idxBarFill" style="width:0%"></div></div>
+      <div class="idx-progress-row">
+        <span id="idxStatus">Initializing…</span>
+        <span class="pct" id="idxPct">0%</span>
+      </div>
+      <div class="idx-info"><strong>Incremental update.</strong> Only NEW plugins are fetched; existing ones are reused from local storage. Storage never expires — first run is slow (~10 min for 290k plugins), subsequent updates are seconds.</div>
+      <div class="idx-actions"><button class="btn danger" onclick="abortIndex()">Abort build</button></div>
+    </div>
+  </div>
+
+  <div class="dashboard" id="dashboard" style="display:none">
+    <div class="metrics">
+      <div class="metric m-total"><div class="metric-label">Total CVEs</div><div class="metric-value" id="mTotal">0</div><div class="metric-sub">in scan</div></div>
+      <div class="metric m-cov"><div class="metric-label">Covered</div><div class="metric-value" id="mCov">0</div><div class="metric-sub">has Nessus plugin</div></div>
+      <div class="metric m-nc"><div class="metric-label">Not covered</div><div class="metric-value" id="mNc">0</div><div class="metric-sub">no plugin found</div></div>
+      <div class="metric m-pct"><div class="metric-label">Coverage</div><div class="metric-value" id="mPct">—</div><div class="metric-sub" id="mPctSub">of checked</div></div>
+      <div class="metric m-idx"><div class="metric-label">Index size</div><div class="metric-value" id="mIdx">—</div><div class="metric-sub">CVEs indexed</div></div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-cell">
+        <div class="chart-heading">Coverage breakdown</div>
+        <div class="donut-row">
+          <div class="donut-c">
+            <svg viewBox="0 0 120 120">
+              <circle class="d-bg" cx="60" cy="60" r="47"/>
+              <circle class="d-nc" cx="60" cy="60" r="47" id="arcNc" stroke-dasharray="0 295.3" stroke-dashoffset="0"/>
+              <circle class="d-cov" cx="60" cy="60" r="47" id="arcCov" stroke-dasharray="0 295.3" stroke-dashoffset="0"/>
+            </svg>
+            <div class="donut-mid"><div class="donut-pct" id="donutPct">—</div><div class="donut-lbl">covered</div></div>
+          </div>
+          <div class="legend">
+            <div class="legend-row"><div class="legend-dot" style="background:var(--ok)"></div>Covered<span class="legend-val" id="lCov">0</span></div>
+            <div class="legend-row"><div class="legend-dot" style="background:var(--bad)"></div>Not covered<span class="legend-val" id="lNc">0</span></div>
+            <div class="legend-row"><div class="legend-dot" style="background:var(--bg-alt);border:1px solid var(--line-2)"></div>Pending<span class="legend-val" id="lPend">0</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-cell">
+        <div class="chart-heading">CVSS severity distribution</div>
+        <div class="sev-bars">
+          <div class="sev-row"><div class="sev-name" style="color:var(--crit)">Critical</div><div class="sev-track"><div class="sev-fill" id="sfC" style="width:0%;background:var(--crit)"></div></div><div class="sev-n" id="snC">0</div></div>
+          <div class="sev-row"><div class="sev-name" style="color:var(--high)">High</div><div class="sev-track"><div class="sev-fill" id="sfH" style="width:0%;background:var(--high)"></div></div><div class="sev-n" id="snH">0</div></div>
+          <div class="sev-row"><div class="sev-name" style="color:var(--med)">Medium</div><div class="sev-track"><div class="sev-fill" id="sfM" style="width:0%;background:var(--med)"></div></div><div class="sev-n" id="snM">0</div></div>
+          <div class="sev-row"><div class="sev-name" style="color:var(--low)">Low</div><div class="sev-track"><div class="sev-fill" id="sfL" style="width:0%;background:var(--low)"></div></div><div class="sev-n" id="snL">0</div></div>
+          <div class="sev-row"><div class="sev-name" style="color:var(--ink-4)">N/A</div><div class="sev-track"><div class="sev-fill" id="sfN" style="width:0%;background:var(--ink-5)"></div></div><div class="sev-n" id="snN">0</div></div>
+        </div>
+      </div>
+      <div class="chart-cell"><div class="chart-heading">Per-CVE heatmap</div><div class="heatmap" id="heatmap"></div></div>
+    </div>
+
+    <div class="scan-bar" id="scanBar" style="display:none">
+      <div class="scan-spin"></div>
+      <div class="scan-text" id="scanText">Scanning…</div>
+      <div class="scan-track"><div class="scan-fill" id="scanFill" style="width:0%"></div></div>
+      <div class="scan-pct" id="scanPct">0%</div>
+    </div>
+
+    <div class="tbar">
+      <div class="tbar-left">
+        <div class="tbar-title">Results <em id="tbarCount"></em></div>
+        <div id="filterBar"></div>
+        <input class="search" id="searchInp" placeholder="Search CVE or plugin…" oninput="renderTable()">
+      </div>
+      <div class="tbar-right">
+        <button class="btn sm" style="width:auto" onclick="sortBy('cvss')">CVSS ⇅</button>
+        <button class="btn sm" style="width:auto" onclick="sortBy('status')">Status ⇅</button>
+        <button class="btn sm" style="width:auto" onclick="sortBy('cve')">CVE ⇅</button>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <colgroup>
+          <col style="width:150px"><col style="width:120px"><col style="width:70px">
+          <col style="width:80px"><col style="width:85px"><col style="width:200px">
+          <col><col style="width:44px">
+        </colgroup>
+        <thead><tr>
+          <th>CVE ID <span class="sort-arrow">⇅</span></th>
+          <th>Status <span class="sort-arrow">⇅</span></th>
+          <th style="text-align:center">Plugins</th>
+          <th>CVSS v3 <span class="sort-arrow">⇅</span></th>
+          <th>Severity</th>
+          <th>Plugin IDs</th>
+          <th>First plugin name</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="log-panel" id="logPanel"></div>
+  </div>
+</main>
+</div>
+<div class="tooltip" id="tt"></div>
+
+<script>
+let cves = [], results = [], manualCVEs = [];
+let currentFilter = 'all', sortKey = 'cve', sortDir = 1;
+let logSeq = 0, pollTimer = null;
+
+function setPill(cls, text, pulse) {
+  const el = document.getElementById('connPill');
+  el.className = 'pill ' + cls;
+  el.innerHTML = '<div class="pill-dot' + (pulse ? ' pulse' : '') + '"></div><span>' + text + '</span>';
+}
+
+async function connect() {
+  const url = document.getElementById('nUrl').value.trim();
+  const ak  = document.getElementById('accessKey').value.trim();
+  const sk  = document.getElementById('secretKey').value.trim();
+  if (!ak || !sk) { alert('Enter Access Key and Secret Key'); return; }
+  const btn = document.getElementById('connectBtn');
+  btn.disabled = true;
+  setPill('warn', 'Connecting…', true);
+  try {
+    const r = await fetch('/api/connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, access_key: ak, secret_key: sk }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      setPill('ok', 'Connected · v' + d.version, false);
+      document.getElementById('brandStatus').textContent = 'Nessus ' + d.version;
+      document.getElementById('topConnInfo').style.display = '';
+      document.getElementById('nessusVer').textContent = d.version;
+      document.getElementById('buildIdxBtn').disabled = false;
+      if (d.index_built) {
+        document.getElementById('brandIndex').textContent = d.index_cves.toLocaleString() + ' CVEs';
+        showDashboard(d.index_cves);
+        addLog('ok', 'Connected — index ready (' + d.index_cves.toLocaleString() + ' CVEs cached)');
+      } else {
+        document.getElementById('brandIndex').textContent = 'not built';
+        addLog('ok', 'Connected to Nessus ' + d.version);
+      }
+      startPolling();
+    } else {
+      setPill('bad', d.msg || 'Failed', false);
+      addLog('bad', 'Connection failed: ' + d.msg);
+    }
+  } catch (e) {
+    setPill('bad', 'Network error', false);
+    addLog('bad', e.message);
+  }
+  btn.disabled = false;
+}
+
+async function buildIndex(forceFull) {
+  const concurrency = parseInt(document.getElementById('concSlider').value);
+  const mode = forceFull ? 'full rebuild' : 'incremental update';
+  addLog('info', 'Starting ' + mode + ' with ' + concurrency + ' workers');
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('indexPanel').style.display = 'flex';
+  document.getElementById('buildIdxBtn').disabled = true;
+  document.getElementById('abortIdxBtn').style.display = '';
+  document.getElementById('sbIdxBox').classList.add('on');
+  const r = await fetch('/api/build-index', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ concurrency, force_full: !!forceFull }),
+  });
+  const d = await r.json();
+  if (!d.ok) alert(d.msg);
+}
+
+async function abortIndex() {
+  if (!confirm('Abort index build? Already-fetched plugins will be saved.')) return;
+  await fetch('/api/abort-index', { method: 'POST' });
+  addLog('warn', 'Abort requested');
+}
+
+async function forceRebuild() {
+  if (!confirm('Force a FULL rebuild?\n\nThis re-fetches ALL plugins from Nessus (~10 min). Use only if the local store seems corrupted or out-of-sync.\n\nFor normal updates, use "Build / Update index" instead — it only fetches NEW plugins.')) return;
+  await fetch('/api/clear-cache', { method: 'POST' });
+  addLog('warn', 'Local store cleared — starting full rebuild');
+  buildIndex(true);
+}
+
+function showDashboard(indexSize) {
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('indexPanel').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'flex';
+  document.getElementById('mIdx').textContent = indexSize.toLocaleString();
+  document.getElementById('rebuildBtn').style.display = '';
+  document.getElementById('abortIdxBtn').style.display = 'none';
+  document.getElementById('sbIdxBox').classList.remove('on');
+  // Re-enable the build/update button so user can incrementally update later
+  document.getElementById('buildIdxBtn').disabled = false;
+  checkScanReady();
+}
+
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(poll, 800);
+}
+
+async function poll() {
+  try {
+    const r = await fetch('/api/status?since=' + logSeq);
+    const d = await r.json();
+    if (d.log_seq > logSeq) {
+      logSeq = d.log_seq;
+      d.log.forEach(l => addLog(l.lvl, l.msg, l.ts));
+    }
+    if (d.index_building) {
+      document.getElementById('indexPanel').style.display = 'flex';
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('idxPct').textContent = d.index_progress + '%';
+      document.getElementById('idxBarFill').style.width = d.index_progress + '%';
+      document.getElementById('idxStatus').textContent = d.index_status || 'Working…';
+      document.getElementById('idxDone').textContent = d.index_done.toLocaleString();
+      document.getElementById('idxTotal').textContent = d.index_total ? d.index_total.toLocaleString() : '—';
+      document.getElementById('idxCves').textContent = d.index_cves.toLocaleString();
+      document.getElementById('idxEta').textContent = d.index_eta
+        ? Math.floor(d.index_eta / 60) + 'm ' + (d.index_eta % 60) + 's'
+        : '—';
+      document.getElementById('idxSubtitle').textContent = d.index_status || '';
+      document.getElementById('sbIdxBox').classList.add('on');
+      document.getElementById('sbIdxLabel').textContent =
+        d.index_done.toLocaleString() + '/' + (d.index_total || '?').toLocaleString() + ' · ' + d.index_progress + '%';
+      document.getElementById('sbIdxFill').style.width = d.index_progress + '%';
+    } else if (d.index_built) {
+      if (document.getElementById('indexPanel').style.display !== 'none') {
+        document.getElementById('brandIndex').textContent = d.index_cves.toLocaleString() + ' CVEs';
+        showDashboard(d.index_cves);
+        addLog('ok', 'Index ready — ' + d.index_cves.toLocaleString() + ' CVEs');
+      }
+    }
+    if (d.scanning) {
+      document.getElementById('scanBar').style.display = '';
+      const pct = d.scan_total > 0 ? Math.round(d.scan_done / d.scan_total * 100) : 0;
+      document.getElementById('scanFill').style.width = pct + '%';
+      document.getElementById('scanPct').textContent = pct + '%';
+      document.getElementById('scanText').textContent =
+        'Scanning ' + d.scan_done + ' / ' + d.scan_total + ' CVEs…';
+    } else if (document.getElementById('scanBar').style.display !== 'none' && d.results.length) {
+      document.getElementById('scanBar').style.display = 'none';
+    }
+    if (d.results.length) {
+      results = d.results;
+      renderAll();
+      if (!d.scanning) {
+        document.getElementById('exportBtn').style.display = '';
+        document.getElementById('copyCovBtn').style.display = '';
+        document.getElementById('copyNcBtn').style.display = '';
+      }
+    }
+  } catch (e) { console.warn('poll error', e); }
+}
+
+function switchTab(t) {
+  ['upload','paste','manual'].forEach(id => {
+    document.getElementById('panel-' + id).style.display = id === t ? '' : 'none';
+    document.getElementById('tab-' + id).classList.toggle('on', id === t);
+  });
+  if (t === 'paste') cves = extractCVEs(document.getElementById('pasteArea').value);
+  if (t === 'manual') cves = [...manualCVEs];
+  updateParseInfo();
+  checkScanReady();
+}
+
+const dzEl = document.getElementById('dz');
+dzEl.addEventListener('dragover', e => { e.preventDefault(); dzEl.classList.add('over'); });
+dzEl.addEventListener('dragleave', () => dzEl.classList.remove('over'));
+dzEl.addEventListener('drop', e => {
+  e.preventDefault(); dzEl.classList.remove('over');
+  if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+});
+document.getElementById('fileInp').addEventListener('change', e => {
+  if (e.target.files[0]) uploadFile(e.target.files[0]);
+});
+
+async function uploadFile(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const r = await fetch('/api/upload-cves', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) {
+      cves = d.cves;
+      document.getElementById('chipArea').innerHTML =
+        '<div class="file-chip">▣ ' + d.filename + ' — ' + d.count + ' CVEs ' +
+        '<button onclick="clearFile()">×</button></div>';
+      addLog('info', 'Loaded ' + d.count + ' CVE IDs from ' + d.filename);
+    } else alert(d.msg);
+  } catch (e) { alert('Upload error: ' + e.message); }
+  updateParseInfo();
+  checkScanReady();
+}
+
+function clearFile() {
+  cves = [];
+  document.getElementById('chipArea').innerHTML = '';
+  document.getElementById('fileInp').value = '';
+  updateParseInfo();
+  checkScanReady();
+}
+
+function onPaste() {
+  cves = extractCVEs(document.getElementById('pasteArea').value);
+  updateParseInfo();
+  checkScanReady();
+}
+
+function extractCVEs(text) {
+  const matches = text.match(/CVE-\d{4}-\d{4,}/gi) || [];
+  const seen = new Set(), unique = [];
+  matches.forEach(c => { const u = c.toUpperCase(); if (!seen.has(u)) { seen.add(u); unique.push(u); } });
+  return unique;
+}
+
+function addManual() {
+  const inp = document.getElementById('manCveInp');
+  const v = inp.value.trim().toUpperCase();
+  if (!/^CVE-\d{4}-\d{4,}$/.test(v)) {
+    inp.style.borderColor = 'var(--bad)';
+    setTimeout(() => inp.style.borderColor = '', 700);
+    return;
+  }
+  if (!manualCVEs.includes(v)) manualCVEs.push(v);
+  cves = [...manualCVEs];
+  inp.value = '';
+  renderManualList();
+  updateParseInfo();
+  checkScanReady();
+}
+
+function removeManual(c) {
+  manualCVEs = manualCVEs.filter(x => x !== c);
+  cves = [...manualCVEs];
+  renderManualList();
+  updateParseInfo();
+  checkScanReady();
+}
+
+function renderManualList() {
+  document.getElementById('manList').innerHTML = manualCVEs.map(c =>
+    '<div class="man-item"><span>' + c + '</span>' +
+    '<button class="man-rm" onclick="removeManual(\'' + c + '\')">×</button></div>'
+  ).join('');
+}
+
+function updateParseInfo() {
+  document.getElementById('parseInfo').innerHTML = cves.length
+    ? '<div class="parse-badge">● ' + cves.length + ' unique CVE ID' + (cves.length !== 1 ? 's' : '') + ' ready</div>'
+    : '';
+}
+
+function checkScanReady() {
+  const ready = cves.length > 0 && document.getElementById('connPill').classList.contains('ok');
+  const brand = document.getElementById('brandIndex').textContent;
+  const indexReady = brand.includes('CVEs');
+  document.getElementById('scanBtn').disabled = !(ready && indexReady);
+}
+
+async function runScan() {
+  if (!cves.length) return;
+  const r = await fetch('/api/scan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cves }),
+  });
+  const d = await r.json();
+  if (!d.ok) { alert(d.msg); return; }
+  document.getElementById('scanBar').style.display = '';
+  document.getElementById('exportBtn').style.display = 'none';
+  document.getElementById('copyCovBtn').style.display = 'none';
+  document.getElementById('copyNcBtn').style.display = 'none';
+  addLog('info', 'Scanning ' + cves.length + ' CVEs…');
+}
+
+function renderAll() {
+  updateMetrics();
+  updateCharts();
+  renderFilter();
+  renderTable();
+}
+
+function updateMetrics() {
+  const done = results.filter(r => r.status !== 'Pending');
+  const cov = done.filter(r => r.status === 'Covered').length;
+  const nc  = done.filter(r => r.status === 'Not Covered').length;
+  const pct = done.length ? Math.round(cov / done.length * 100) : 0;
+  document.getElementById('mTotal').textContent = results.length;
+  document.getElementById('mCov').textContent = cov;
+  document.getElementById('mNc').textContent = nc;
+  document.getElementById('mPct').textContent = done.length ? pct + '%' : '—';
+  document.getElementById('mPctSub').textContent = done.length ? 'of ' + done.length + ' checked' : '';
+  document.getElementById('tbarCount').textContent = results.length ? '— ' + done.length + '/' + results.length : '';
+}
+
+function updateCharts() {
+  if (!results.length) return;
+  const done = results.filter(r => r.status !== 'Pending');
+  const cov = done.filter(r => r.status === 'Covered').length;
+  const nc  = done.filter(r => r.status === 'Not Covered').length;
+  const pend = results.length - done.length;
+  const total = done.length;
+
+  const circ = 2 * Math.PI * 47;
+  const pct = total ? Math.round(cov / total * 100) : 0;
+  document.getElementById('donutPct').textContent = total ? pct + '%' : '—';
+  document.getElementById('lCov').textContent = cov;
+  document.getElementById('lNc').textContent = nc;
+  document.getElementById('lPend').textContent = pend;
+
+  const ncd  = total ? nc / total * circ : 0;
+  const covd = total ? cov / total * circ : 0;
+  document.getElementById('arcNc').setAttribute('stroke-dasharray', ncd + ' ' + circ);
+  document.getElementById('arcNc').setAttribute('stroke-dashoffset', '0');
+  document.getElementById('arcCov').setAttribute('stroke-dasharray', covd + ' ' + circ);
+  document.getElementById('arcCov').setAttribute('stroke-dashoffset', (-ncd).toString());
+
+  const sev = { c: 0, h: 0, m: 0, l: 0, n: 0 };
+  done.forEach(r => {
+    const s = parseFloat(r.cvss);
+    if (isNaN(s)) sev.n++;
+    else if (s >= 9) sev.c++;
+    else if (s >= 7) sev.h++;
+    else if (s >= 4) sev.m++;
+    else sev.l++;
+  });
+  const mx = Math.max(...Object.values(sev), 1);
+  ['c','h','m','l','n'].forEach(k => {
+    const upperK = k.toUpperCase();
+    document.getElementById('sf' + upperK).style.width = (sev[k] / mx * 100) + '%';
+    document.getElementById('sn' + upperK).textContent = sev[k];
+  });
+
+  document.getElementById('heatmap').innerHTML = results.map(r => {
+    const cls = r.status === 'Covered' ? 'cov'
+              : r.status === 'Not Covered' ? 'nc' : 'pend';
+    return '<div class="heat-cell ' + cls +
+           '" onmouseenter="showTt(event,\'' + r.cve + ' · ' + r.status + '\')"' +
+           ' onmouseleave="hideTt()"></div>';
+  }).join('');
+}
+
+function renderFilter() {
+  const cov = results.filter(r => r.status === 'Covered').length;
+  const nc  = results.filter(r => r.status === 'Not Covered').length;
+  document.getElementById('filterBar').innerHTML =
+    '<button class="filter-chip ' + (currentFilter === 'all' ? 'on all' : '') +
+    '" onclick="setFilter(\'all\')">All · ' + results.length + '</button>' +
+    '<button class="filter-chip ' + (currentFilter === 'cov' ? 'on cov' : '') +
+    '" onclick="setFilter(\'cov\')">✓ Covered · ' + cov + '</button>' +
+    '<button class="filter-chip ' + (currentFilter === 'nc' ? 'on nc' : '') +
+    '" onclick="setFilter(\'nc\')">✗ Not covered · ' + nc + '</button>';
+}
+
+function setFilter(f) { currentFilter = f; renderFilter(); renderTable(); }
+
+function sortBy(k) {
+  if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
+  renderTable();
+}
+
+function renderTable() {
+  const q = document.getElementById('searchInp').value.toLowerCase();
+  let rows = results.filter(r => {
+    if (currentFilter === 'cov' && r.status !== 'Covered') return false;
+    if (currentFilter === 'nc'  && r.status !== 'Not Covered') return false;
+    if (q) {
+      const hay = (r.cve + ' ' + (r.plugin_name || '') + ' ' + (r.plugin_ids || '')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  rows.sort((a, b) => {
+    if (sortKey === 'cvss') return ((parseFloat(b.cvss) || 0) - (parseFloat(a.cvss) || 0)) * sortDir;
+    if (sortKey === 'status') {
+      const o = { 'Covered': 0, 'Not Covered': 1, 'Pending': 2 };
+      return ((o[a.status] || 3) - (o[b.status] || 3)) * sortDir;
+    }
+    return a.cve.localeCompare(b.cve) * sortDir;
+  });
+
+  if (!rows.length) {
+    document.getElementById('tbody').innerHTML =
+      '<tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--ink-4);font-family:var(--mono);font-size:12px">No results</td></tr>';
+    return;
+  }
+  document.getElementById('tbody').innerHTML = rows.map(r => buildRow(r, results.indexOf(r))).join('');
+}
+
+function buildRow(r, i) {
+  const badge = r.status === 'Covered'
+    ? '<span class="status-badge sb-cov">● Covered</span>'
+    : r.status === 'Not Covered'
+      ? '<span class="status-badge sb-nc">○ Not covered</span>'
+      : '<span class="status-badge sb-pend">Pending</span>';
+  const s = parseFloat(r.cvss);
+  const cpCls = isNaN(s) ? 'cp-n'
+              : s >= 9 ? 'cvss-pill cp-c'
+              : s >= 7 ? 'cvss-pill cp-h'
+              : s >= 4 ? 'cvss-pill cp-m'
+              : 'cvss-pill cp-l';
+  const cv = '<span class="' + cpCls + '">' + (r.cvss || '—') + '</span>';
+  const sv = isNaN(s) ? '<span class="sev-tag sev-none">—</span>'
+    : s >= 9 ? '<span class="sev-tag sev-critical">Critical</span>'
+    : s >= 7 ? '<span class="sev-tag sev-high">High</span>'
+    : s >= 4 ? '<span class="sev-tag sev-medium">Medium</span>'
+    : '<span class="sev-tag sev-low">Low</span>';
+  const pids = r.plugin_ids
+    ? '<span class="plugin-ids">' + r.plugin_ids + '</span>'
+    : '<span class="muted">—</span>';
+  const pn = r.plugin_name
+    ? '<span class="plugin-name" title="' + esc(r.plugin_name) + '">' + esc(r.plugin_name) + '</span>'
+    : '<span class="muted">—</span>';
+  const rc = r.status === 'Covered' ? 'cov' : r.status === 'Not Covered' ? 'nc' : '';
+  const eb = r.plugin_count > 0
+    ? '<button class="expand-btn" onclick="toggleExpand(' + i + ')">+</button>'
+    : '';
+  return '<tr class="' + rc + '" id="row-' + i + '">' +
+    '<td><a class="cve-link" href="https://nvd.nist.gov/vuln/detail/' + r.cve + '" target="_blank">' + r.cve + '</a></td>' +
+    '<td>' + badge + '</td>' +
+    '<td style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--ink-3)">' + (r.plugin_count || 0) + '</td>' +
+    '<td>' + cv + '</td>' +
+    '<td>' + sv + '</td>' +
+    '<td>' + pids + '</td>' +
+    '<td>' + pn + '</td>' +
+    '<td>' + eb + '</td></tr>';
+}
+
+function toggleExpand(i) {
+  const ex = document.getElementById('exp-' + i);
+  if (ex) { ex.remove(); return; }
+  const r = results[i];
+  const ids = (r.plugin_ids || '').split(/,\s*/).filter(x => x);
+  const tags = ids.length
+    ? ids.map(id => '<span class="plugin-tag"><span class="plugin-tag-id">' + id + '</span></span>').join('')
+    : '<span class="muted">No plugin IDs available</span>';
+  const d = document.createElement('tr');
+  d.id = 'exp-' + i;
+  d.innerHTML = '<td colspan="8" class="expand-detail">' +
+    '<strong>CVE:</strong> ' + r.cve + '  ' +
+    '<strong>CVSS:</strong> ' + (r.cvss || 'N/A') + '  ' +
+    '<strong>Status:</strong> ' + r.status + '  ' +
+    '<strong>Plugins:</strong> ' + (r.plugin_count || 0) +
+    '<div style="margin-top:8px"><strong>First plugin:</strong> ' + esc(r.plugin_name || '—') + '</div>' +
+    '<div class="plugin-tags">' + tags + '</div></td>';
+  document.getElementById('row-' + i).after(d);
+}
+
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function exportXlsx() { window.location.href = '/api/export'; }
+
+function copyList(status) {
+  const list = results.filter(r => r.status === status).map(r => r.cve).join('\n');
+  navigator.clipboard.writeText(list).then(() => {
+    addLog('info', 'Copied ' + results.filter(r => r.status === status).length + ' ' + status + ' CVEs');
+  });
+}
+
+async function clearAll() {
+  if (!confirm('Clear all results? (Index will be kept)')) return;
+  cves = [];
+  results = [];
+  manualCVEs = [];
+  clearFile();
+  document.getElementById('pasteArea').value = '';
+  document.getElementById('manList').innerHTML = '';
+  updateParseInfo();
+  document.getElementById('exportBtn').style.display = 'none';
+  document.getElementById('copyCovBtn').style.display = 'none';
+  document.getElementById('copyNcBtn').style.display = 'none';
+  renderAll();
+  checkScanReady();
+}
+
+function addLog(lvl, msg, ts) {
+  const w = document.getElementById('logPanel');
+  if (!w) return;
+  const t = ts || new Date().toTimeString().slice(0, 8);
+  const cls = lvl === 'ok' ? 'log-ok'
+            : lvl === 'err' || lvl === 'bad' ? 'log-bad'
+            : lvl === 'warn' ? 'log-warn'
+            : 'log-info';
+  const l = document.createElement('div');
+  l.className = 'log-line';
+  l.innerHTML = '<span class="log-ts">[' + t + ']</span><span class="' + cls + '">' + msg + '</span>';
+  w.appendChild(l);
+  w.scrollTop = w.scrollHeight;
+  while (w.children.length > 300) w.removeChild(w.firstChild);
+}
+
+function showTt(e, t) {
+  const el = document.getElementById('tt');
+  el.textContent = t;
+  el.style.display = 'block';
+  el.style.left = (e.clientX + 12) + 'px';
+  el.style.top  = (e.clientY + 12) + 'px';
+}
+function hideTt() { document.getElementById('tt').style.display = 'none'; }
+</script>
+</body>
+</html>
